@@ -44,7 +44,21 @@ public class GuicyDummy extends AbstractModule {
 }
 
 In this case play will pick up this module and inject it into your application's Controller, Job and Mail classes (marked by **@javax.inject.Inject**). Note, the custom injector strategy will always take precedent.
- 
+
+h2. <a>Inject classes other than Controller, Job and Mail</a>
+
+In order to inject classes that are neither controller nor Job and Mail, you need to annotate the class with play.modules.guice.InjectSupport annotation.
+For example:
+
+bc. package models
+import play.db.*
+import play.modules.guice.*
+import javax.inject.*
+@InjectSupport
+public class MyModel extends Model {
+    @Inject
+    static MyService service;
+}
 
 h2. <a>Limitations</a>
 

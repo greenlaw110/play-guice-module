@@ -4,8 +4,11 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
 import play.Play;
 import play.PlayPlugin;
 import play.inject.BeanSource;
@@ -67,11 +70,33 @@ public class GuicePlugin extends PlayPlugin implements BeanSource {
 			Logger.info("Guice modules were found: "+moduleList);
             this.injector = Guice.createInjector(modules);
         } 
+        // play inject Controller/Job/Mail only at the moment
         play.inject.Injector.inject(this);
+        // let's inject other classes with play.modules.guice.InjectSupport annotation
+        injectAnnotated(this);
     }
 
     public <T> T getBeanOfType(Class<T> clazz) {
         if (this.injector==null)return null;
         return this.injector.getInstance(clazz);
+    }
+    
+    private void injectAnnotated(BeanSource source) {
+        List<Class> classes = Play.classloader.getAnnotatedClasses(play.modules.guice.InjectSupport.class);
+        for(Class<?> clazz : classes) {
+            for(Field field : clazz.getDeclaredFields()) {
+                if(Modifier.isStatic(field.getModifiers()) && field.isAnnotationPresent(Inject.class)) {
+                    Class<?> type = field.getType();
+                    field.setAccessible(true);
+                    try {
+                        field.set(null, source.getBeanOfType(type));
+                    } catch(RuntimeException e) {
+                        throw e;
+                    } catch(Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }
     }
 }
